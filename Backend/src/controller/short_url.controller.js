@@ -5,7 +5,7 @@ export const createShortUrlController = async (req, res) => {
 
     try {
         const shortUrl = await createShortUrlService(url);
-        return res.status(201).send(shortUrl);
+        return res.status(201).send(process.env.APP_URL + "/" + shortUrl);
     } catch (error) {
         console.error("Failed to create short URL:", error.message);
         return res
