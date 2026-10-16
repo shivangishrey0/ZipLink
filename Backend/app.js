@@ -2,7 +2,7 @@ import express from "express";
 import { nanoid } from "nanoid";
 import dotenv from "dotenv";
 import connectDB from "./src/config/mongo.config.js";
-import ShortUrl from "./src/models/shortUrl.model.js";
+import ShortUrl from "./src/models/shorturl.model.js";
 
 dotenv.config({ path: "./.env" });
 
