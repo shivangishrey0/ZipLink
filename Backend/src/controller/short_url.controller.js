@@ -1,24 +1,15 @@
-import { nanoid } from "nanoid";
-import ShortUrl from "../models/short_url.model.js";
+import { createShortUrlService } from "../services/short_url.service.js";
 
 export const createShortUrlController = async (req, res) => {
     const { url } = req.body;
 
-    if (!url || typeof url !== "string") {
-        return res.status(400).json({ error: "A URL is required." });
-    }
-
     try {
-        const shortUrl = nanoid(7);
-        const newUrl = new ShortUrl({
-            full_url: url,
-            short_url: shortUrl,
-        });
-
-        await newUrl.save();
+        const shortUrl = await createShortUrlService(url);
         return res.status(201).send(shortUrl);
     } catch (error) {
         console.error("Failed to create short URL:", error.message);
-        return res.status(500).json({ error: "Failed to create short URL." });
+        return res
+            .status(error.statusCode || 500)
+            .json({ error: error.statusCode ? error.message : "Failed to create short URL." });
     }
 };
