@@ -2,7 +2,8 @@ import express from "express";
 import { nanoid } from "nanoid";
 import dotenv from "dotenv";
 import connectDB from "./src/config/mongo.config.js";
-import ShortUrl from "./src/models/shorturl.model.js";
+import ShortUrl from "./src/models/short_url.model.js";
+import shortUrlRouter from "./src/routes/short_url.route.js"; 
 
 dotenv.config({ path: "./.env" });
 
@@ -11,28 +12,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.post("/api/create", async (req, res) => {
-    const { url } = req.body;
-
-    if (!url || typeof url !== "string") {
-        return res.status(400).json({ error: "A URL is required." });
-    }
-
-    try {
-        const shortUrl = nanoid(7);
-        const newUrl = await ShortUrl.create({
-            full_url: url,
-            short_url: shortUrl,
-        });
-
-        return res.status(201).json({
-            shortId: newUrl.short_url,
-        });
-    } catch (error) {
-        console.error("Failed to create short URL:", error.message);
-        return res.status(500).json({ error: "Failed to create short URL." });
-    }
-});
+app.use("/api/create", shortUrlRouter);
 app.get("/:id", async (req, res) => {
     const { id } = req.params;
 
