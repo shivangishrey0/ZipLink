@@ -33,6 +33,24 @@ app.post("/api/create", async (req, res) => {
         return res.status(500).json({ error: "Failed to create short URL." });
     }
 });
+app.get("/:id", async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const url = await ShortUrl.findOne({ short_url: id });
+
+        if (!url) {
+            return res.status(404).send("URL not found");
+        }
+
+        url.clicks++;
+        await url.save();
+        return res.redirect(url.full_url);
+    } catch (error) {
+        console.error("Failed to redirect short URL:", error.message);
+        return res.status(500).send("Failed to redirect short URL");
+    }
+});
 
 const startServer = async () => {
     await connectDB();
