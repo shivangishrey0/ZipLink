@@ -10,14 +10,13 @@ export const createShortUrlController = async (req, res) => {
 
     try {
         const shortUrl = nanoid(7);
-        const newUrl = await ShortUrl.create({
+        const newUrl = new ShortUrl({
             full_url: url,
             short_url: shortUrl,
         });
 
-        return res.status(201).json({
-            shortId: newUrl.short_url,
-        });
+        await newUrl.save();
+        return res.status(201).send(shortUrl);
     } catch (error) {
         console.error("Failed to create short URL:", error.message);
         return res.status(500).json({ error: "Failed to create short URL." });
