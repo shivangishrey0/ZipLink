@@ -1,0 +1,7 @@
+# Real secrets never go into Git. Only the .env.example templates are tracked.
+.env
+.env.*
+!.env.example
+
+node_modules/
+dist/
