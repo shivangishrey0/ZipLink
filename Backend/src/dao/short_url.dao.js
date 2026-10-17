@@ -11,3 +11,6 @@ export const saveShortUrl = async(shortUrl,longUrl,userId)=> {
     await newUrl.save();
 };
 //data access object agr hmein database me kuch aur use krna haitoh bas ye change krna hai
+export const getShortUrl=async(shortUrl)=>{
+    return await ShortUrl.findOne({short_url:shortUrl})
+}
