@@ -6,6 +6,7 @@ import connectDB from "./src/config/mongo.config.js";
 import shortUrlRouter from "./src/routes/short_url.route.js"; 
 import authRouter from "./src/routes/auth.route.js";
 import userRouter from "./src/routes/user.route.js";
+import analyticsRouter from "./src/routes/analytics.route.js";
 import { redirectFromShortUrl } from "./src/controller/short_url.controller.js";
 import { errorHandler } from "./src/Utils/errorHandler.js";
 
@@ -18,6 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
+app.use("/api/analytics", analyticsRouter);
 app.use("/api/create", shortUrlRouter);
 app.get("/:id", redirectFromShortUrl)
 

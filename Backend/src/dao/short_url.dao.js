@@ -38,3 +38,6 @@ export const deleteUrlByIdAndUser=async(id,userId)=>{
     if(!mongoose.isValidObjectId(id)) return null
     return await ShortUrl.findOneAndDelete({_id:id,user:userId})
 }
+export const findUrlByCodeAndUser=async(code,userId)=>{
+    return await ShortUrl.findOne({short_url:code,user:userId})
+}

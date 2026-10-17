@@ -71,7 +71,7 @@ export const getLongUrlService = async (code, device) => {
     return url.full_url;
 };
 
-const toPublicUrl = (url) => ({
+export const toPublicUrl = (url) => ({
     id: url._id,
     fullUrl: url.full_url,
     shortCode: url.short_url,
