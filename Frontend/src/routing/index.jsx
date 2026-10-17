@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, lazyRouteComponent } from "@tanstack/react-router";
 import RootLayout from "../RootLayout.jsx";
 import HomePage from "../pages/HomePage.jsx";
 import AuthPage from "../pages/AuthPage.jsx";
@@ -48,6 +48,13 @@ const urlsRoute = createRoute({
   component: UrlsPage,
 });
 
+const analyticsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/analytics/$code",
+  // The charting library is large, so this page is only downloaded when someone opens it.
+  component: lazyRouteComponent(() => import("../pages/AnalyticsPage.jsx")),
+});
+
 const expiredRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/expired",
@@ -72,6 +79,7 @@ const routeTree = rootRoute.addChildren([
   registerRoute,
   googleCallbackRoute,
   urlsRoute,
+  analyticsRoute,
   expiredRoute,
   notActiveRoute,
   protectedRoute,

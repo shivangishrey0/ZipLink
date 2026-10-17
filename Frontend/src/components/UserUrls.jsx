@@ -1,33 +1,23 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Lock, LoaderCircle, MousePointerClick, Pencil, Trash2 } from "lucide-react";
+import {
+  ChartColumn,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  LoaderCircle,
+  MousePointerClick,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { deleteUrl, getUserUrls } from "../api/ShortUrl.api.jsx";
 import { formatDate, formatDateTime, getErrorMessage } from "../utils/helper.js";
 import CopyButton from "./CopyButton.jsx";
 import EditLinkModal from "./EditLinkModal.jsx";
+import StatusBadge from "./StatusBadge.jsx";
 
 const PAGE_SIZE = 10;
-
-const TONES = {
-  ok: "bg-brand-soft text-brand",
-  warn: "bg-warn-soft text-warn",
-  danger: "bg-danger-soft text-danger",
-};
-
-const getStatus = (url) => {
-  const now = Date.now();
-
-  if (url.activeFrom && new Date(url.activeFrom) > now) {
-    return { label: "Not active yet", tone: "warn" };
-  }
-
-  if (url.expiresAt && new Date(url.expiresAt) <= now) {
-    return { label: "Expired", tone: "danger" };
-  }
-
-  return { label: "Active", tone: "ok" };
-};
 
 const UserUrls = () => {
   const [page, setPage] = useState(1);
@@ -99,8 +89,6 @@ const UserUrls = () => {
 
       <ul className={`space-y-3 ${isPlaceholderData ? "opacity-60" : ""}`}>
         {data.urls.map((url) => {
-          const status = getStatus(url);
-
           return (
             <li key={url.id} className="card space-y-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -112,9 +100,7 @@ const UserUrls = () => {
                 >
                   {url.shortUrl}
                 </a>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${TONES[status.tone]}`}>
-                  {status.label}
-                </span>
+                <StatusBadge url={url} />
                 {url.isProtected && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-bg px-2.5 py-0.5 text-xs font-medium text-muted">
                     <Lock size={12} aria-hidden="true" />
@@ -139,6 +125,10 @@ const UserUrls = () => {
 
                 <div className="flex flex-wrap gap-2">
                   <CopyButton text={url.shortUrl} />
+                  <Link to="/analytics/$code" params={{ code: url.shortCode }} className="btn-ghost">
+                    <ChartColumn size={16} aria-hidden="true" />
+                    Analytics
+                  </Link>
                   <button type="button" className="btn-ghost" onClick={() => setEditing(url)}>
                     <Pencil size={16} aria-hidden="true" />
                     Edit
