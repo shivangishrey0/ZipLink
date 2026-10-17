@@ -1,4 +1,5 @@
 import { createShortUrlService, getLongUrlService } from "../services/short_url.service.js";
+import { getDeviceType } from "../Utils/getDeviceType.js";
 import config from "../config/config.js";
 
 export const createShortUrlController = async (req, res) => {
@@ -16,6 +17,6 @@ export const createShortUrlController = async (req, res) => {
 export const redirectFromShortUrl = async (req, res) => {
     const { id } = req.params;
 
-    const longUrl = await getLongUrlService(id);
+    const longUrl = await getLongUrlService(id, getDeviceType(req.get("user-agent")));
     return res.redirect(302, longUrl);
 };

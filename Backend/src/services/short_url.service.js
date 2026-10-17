@@ -4,6 +4,7 @@ import { validateSlug } from "../Utils/validateSlug.js";
 import { validateDates } from "../Utils/validateDates.js";
 import { AppError } from "../Utils/errorHandler.js";
 import config from "../config/config.js";
+import { saveClick, deleteClicksByUrl } from "../dao/click.dao.js";
 import { saveShortUrl, getShortUrl, incrementClicks, findUrlsByUser, countUrlsByUser, findUrlByIdAndUser, updateUrl, deleteUrlByIdAndUser } from "../dao/short_url.dao.js";
 
 const MAX_ATTEMPTS = 5;
@@ -45,7 +46,7 @@ export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt, 
     throw new AppError("Could not generate a unique short URL. Please try again.", 500);
 };
 
-export const getLongUrlService = async (code) => {
+export const getLongUrlService = async (code, device) => {
     const url = await getShortUrl(code);
 
     if (!url) {
@@ -62,7 +63,11 @@ export const getLongUrlService = async (code) => {
         throw new AppError("This link has expired.", 410);
     }
 
-    await incrementClicks(url._id);
+    // Analytics must never slow down or break the redirect, so these writes are not awaited.
+    Promise.all([incrementClicks(url._id), saveClick({ url: url._id, device })]).catch((error) => {
+        console.error("Failed to record click:", error.message);
+    });
+
     return url.full_url;
 };
 
@@ -150,4 +155,6 @@ export const deleteUserUrlService = async (id, userId) => {
     if (!deleted) {
         throw new AppError("URL not found", 404);
     }
+
+    await deleteClicksByUrl(deleted._id);
 };
