@@ -468,15 +468,6 @@ This needs your own Google credentials.
 
 Send 11 wrong login attempts in a row:
 
-```
-for i in $(seq 11); do
-  curl -s -o /dev/null -w "%{http_code} " \
-    -X POST http://localhost:8080/api/auth/login \
-    -H "Content-Type: application/json" \
-    -d '{"email":"nobody@example.com","password":"wrongwrong"}'
-done
-```
-
 - Expect ten 401 answers, then 429
 - Reset the counters with `docker compose exec redis redis-cli flushall`, which also clears the cache and the click queue
 
