@@ -11,5 +11,5 @@ export const redirectFromShortUrl = async (req, res) => {
     const { id } = req.params;
 
     const longUrl = await getLongUrlService(id);
-    return res.redirect(longUrl);
+    return res.redirect(302, longUrl);
 };
