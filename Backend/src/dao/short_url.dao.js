@@ -19,3 +19,9 @@ export const incrementClicks=async(id)=>{
 export const getShortUrl=async(shortUrl)=>{
     return await ShortUrl.findOne({short_url:shortUrl})
 }
+export const findUrlsByUser=async(userId,skip,limit)=>{
+    return await ShortUrl.find({user:userId}).sort({_id:-1}).skip(skip).limit(limit).lean()
+}
+export const countUrlsByUser=async(userId)=>{
+    return await ShortUrl.countDocuments({user:userId})
+}

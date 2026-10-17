@@ -3,9 +3,12 @@ import { validateUrl } from "../Utils/validateUrl.js";
 import { validateSlug } from "../Utils/validateSlug.js";
 import { validateDates } from "../Utils/validateDates.js";
 import { AppError } from "../Utils/errorHandler.js";
-import { saveShortUrl, getShortUrl, incrementClicks } from "../dao/short_url.dao.js";
+import config from "../config/config.js";
+import { saveShortUrl, getShortUrl, incrementClicks, findUrlsByUser, countUrlsByUser } from "../dao/short_url.dao.js";
 
 const MAX_ATTEMPTS = 5;
+const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 50;
 const DUPLICATE_KEY = 11000;
 
 export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt, userId }) => {
@@ -61,4 +64,43 @@ export const getLongUrlService = async (code) => {
 
     await incrementClicks(url._id);
     return url.full_url;
+};
+
+const toPublicUrl = (url) => ({
+    id: url._id,
+    fullUrl: url.full_url,
+    shortCode: url.short_url,
+    shortUrl: `${config.APP_URL}/${url.short_url}`,
+    clicks: url.clicks,
+    activeFrom: url.activeFrom ?? null,
+    expiresAt: url.expiresAt ?? null,
+    createdAt: url.createdAt ?? null,
+});
+
+const toPositiveInt = (value, fallback, max = Infinity) => {
+    const number = Number.parseInt(value, 10);
+
+    if (!Number.isInteger(number) || number < 1) {
+        return fallback;
+    }
+
+    return Math.min(number, max);
+};
+
+export const getUserUrlsService = async (userId, { page, limit }) => {
+    const currentPage = toPositiveInt(page, 1);
+    const pageSize = toPositiveInt(limit, DEFAULT_LIMIT, MAX_LIMIT);
+
+    const [urls, total] = await Promise.all([
+        findUrlsByUser(userId, (currentPage - 1) * pageSize, pageSize),
+        countUrlsByUser(userId),
+    ]);
+
+    return {
+        urls: urls.map(toPublicUrl),
+        page: currentPage,
+        limit: pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+    };
 };
