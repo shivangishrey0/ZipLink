@@ -8,11 +8,12 @@ import {
     googleCallbackController,
 } from "../controller/auth.controller.js";
 import { requireAuth, requireGoogleConfig } from "../middlewares/auth.middleware.js";
+import { authLimiter } from "../middlewares/rateLimit.middleware.js";
 
 const authRouter = express.Router();
 
-authRouter.post("/register", registerController);
-authRouter.post("/login", loginController);
+authRouter.post("/register", authLimiter, registerController);
+authRouter.post("/login", authLimiter, loginController);
 authRouter.post("/logout", logoutController);
 authRouter.get("/check", requireAuth, checkAuthController);
 authRouter.get("/google", requireGoogleConfig, googleStartController);

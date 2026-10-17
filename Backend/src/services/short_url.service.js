@@ -5,10 +5,14 @@ import { validateDates } from "../Utils/validateDates.js";
 import { AppError } from "../Utils/errorHandler.js";
 import argon2 from "argon2";
 import config from "../config/config.js";
-import { saveClick, deleteClicksByUrl } from "../dao/click.dao.js";
-import { saveShortUrl, getShortUrl, getShortUrlWithPassword, incrementClicks, findUrlsByUser, countUrlsByUser, findUrlByIdAndUser, updateUrl, deleteUrlByIdAndUser } from "../dao/short_url.dao.js";
+import { deleteClicksByUrl } from "../dao/click.dao.js";
+import { recordClick } from "./click.service.js";
+import { cacheGet, cacheSet, cacheDelete, linkCacheKey } from "../Utils/cache.js";
+import { saveShortUrl, getShortUrl, getShortUrlWithPassword, findUrlsByUser, countUrlsByUser, findUrlByIdAndUser, updateUrl, deleteUrlByIdAndUser } from "../dao/short_url.dao.js";
 
 const MAX_ATTEMPTS = 5;
+// Short on purpose: edits and deletes remove the entry, this only bounds how long a missed removal can last.
+const LINK_CACHE_SECONDS = 600;
 const MIN_LINK_PASSWORD = 4;
 const MAX_LINK_PASSWORD = 128;
 const DEFAULT_LIMIT = 10;
@@ -73,39 +77,48 @@ export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt, 
 const getLinkState = (url) => {
     const now = new Date();
 
-    if (url.activeFrom && url.activeFrom > now) {
+    // The dates are Date objects from MongoDB but ISO strings when they come back from the cache.
+    if (url.activeFrom && new Date(url.activeFrom) > now) {
         return "not_active";
     }
 
-    if (url.expiresAt && url.expiresAt <= now) {
+    if (url.expiresAt && new Date(url.expiresAt) <= now) {
         return "expired";
     }
 
     return url.isProtected ? "protected" : "ok";
 };
 
-// Analytics must never slow down or break the redirect, so these writes are not awaited.
-const recordClick = (url, device) => {
-    Promise.all([incrementClicks(url._id), saveClick({ url: url._id, device })]).catch((error) => {
-        console.error("Failed to record click:", error.message);
-    });
-};
-
 export const getLongUrlService = async (code, device) => {
-    const url = await getShortUrl(code);
+    const key = linkCacheKey(code);
+    let link = await cacheGet(key);
 
-    if (!url) {
-        throw new AppError("URL not found", 404);
+    if (!link) {
+        const url = await getShortUrl(code);
+
+        if (!url) {
+            throw new AppError("URL not found", 404);
+        }
+
+        link = {
+            id: String(url._id),
+            fullUrl: url.full_url,
+            activeFrom: url.activeFrom ?? null,
+            expiresAt: url.expiresAt ?? null,
+            isProtected: Boolean(url.isProtected),
+        };
+        await cacheSet(key, link, LINK_CACHE_SECONDS);
     }
 
-    const state = getLinkState(url);
+    // The state is worked out from the dates on every request, so a cached link still expires on time.
+    const state = getLinkState(link);
 
     if (state !== "ok") {
         return { state };
     }
 
-    recordClick(url, device);
-    return { state, url: url.full_url };
+    recordClick(link.id, device);
+    return { state, url: link.fullUrl };
 };
 
 export const unlockUrlService = async (code, password, device) => {
@@ -133,7 +146,7 @@ export const unlockUrlService = async (code, password, device) => {
         throw new AppError("Incorrect password.", 401);
     }
 
-    recordClick(url, device);
+    recordClick(url._id, device);
     return url.full_url;
 };
 
@@ -213,7 +226,10 @@ export const updateUserUrlService = async (id, userId, { url, activeFrom, expire
         throw new AppError("activeFrom must be before expiresAt.", 400);
     }
 
-    return toPublicUrl(await updateUrl(link, changes));
+    const updated = await updateUrl(link, changes);
+    await cacheDelete(linkCacheKey(link.short_url));
+
+    return toPublicUrl(updated);
 };
 
 export const deleteUserUrlService = async (id, userId) => {
@@ -224,4 +240,5 @@ export const deleteUserUrlService = async (id, userId) => {
     }
 
     await deleteClicksByUrl(deleted._id);
+    await cacheDelete(linkCacheKey(deleted.short_url));
 };

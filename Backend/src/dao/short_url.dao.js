@@ -46,3 +46,12 @@ export const deleteUrlByIdAndUser=async(id,userId)=>{
 export const findUrlByCodeAndUser=async(code,userId)=>{
     return await ShortUrl.findOne({short_url:code,user:userId})
 }
+
+export const getExistingUrlIds=async(ids)=>{
+    const found=await ShortUrl.find({_id:{$in:ids}}).select("_id").lean()
+    return found.map((url)=>String(url._id))
+}
+export const incrementClicksByCounts=async(counts)=>{
+    const operations=[...counts].map(([id,count])=>({updateOne:{filter:{_id:id},update:{$inc:{clicks:count}}}}))
+    return await ShortUrl.bulkWrite(operations)
+}

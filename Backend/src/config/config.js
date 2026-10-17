@@ -17,6 +17,9 @@ const googleSettings = [
 ];
 
 const config = {
+    REDIS_URL: process.env.REDIS_URL,
+    // How many reverse proxies (Nginx) sit in front of the app. Needed so req.ip is the visitor, not the proxy.
+    TRUST_PROXY: Number(process.env.TRUST_PROXY) || 0,
     NODE_ENV: process.env.NODE_ENV || "development",
     JWT_SECRET: process.env.JWT_SECRET,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,

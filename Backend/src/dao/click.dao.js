@@ -22,3 +22,8 @@ export const getDeviceClicks = async (urlId) => {
         { $sort: { clicks: -1 } },
     ]);
 };
+
+
+export const saveClicks = async (docs) => {
+    return await Click.insertMany(docs, { ordered: false });
+};
