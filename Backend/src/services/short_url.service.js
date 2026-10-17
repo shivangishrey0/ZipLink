@@ -8,7 +8,7 @@ import { saveShortUrl, getShortUrl, incrementClicks } from "../dao/short_url.dao
 const MAX_ATTEMPTS = 5;
 const DUPLICATE_KEY = 11000;
 
-export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt }) => {
+export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt, userId }) => {
     const validUrl = validateUrl(url);
     const dates = validateDates(activeFrom, expiresAt);
 
@@ -16,7 +16,7 @@ export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt }
         validateSlug(slug);
 
         try {
-            await saveShortUrl({ shortUrl: slug, longUrl: validUrl, ...dates });
+            await saveShortUrl({ shortUrl: slug, longUrl: validUrl, userId, ...dates });
             return slug;
         } catch (error) {
             if (error.code === DUPLICATE_KEY) {
@@ -30,7 +30,7 @@ export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt }
         const shortUrl = generateNanoId(7);
 
         try {
-            await saveShortUrl({ shortUrl, longUrl: validUrl, ...dates });
+            await saveShortUrl({ shortUrl, longUrl: validUrl, userId, ...dates });
             return shortUrl;
         } catch (error) {
             if (error.code !== DUPLICATE_KEY) {
