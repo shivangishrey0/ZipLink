@@ -1,11 +1,9 @@
 import express from "express";
 import { nanoid } from "nanoid";
-import dotenv from "dotenv";
+import config from "./src/config/config.js";
 import connectDB from "./src/config/mongo.config.js";
 import shortUrlRouter from "./src/routes/short_url.route.js"; 
 import { redirectFromShortUrl } from "./src/controller/short_url.controller.js";
-
-dotenv.config({ path: "./.env" });
 
 const app = express();
 
