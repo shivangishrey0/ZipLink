@@ -1,0 +1,78 @@
+# Local copy of the whole system: Nginx -> 3 Node copies -> Redis + MongoDB.
+#   docker compose up --build        then open http://localhost:8080
+#
+# Secrets (JWT_SECRET, GOOGLE_*) come from Backend/.env and are never copied into an image.
+# Everything that must differ inside Docker is set under "environment", which wins over the file.
+# NODE_ENV is left unset on purpose: production turns on Secure cookies, which need HTTPS.
+
+name: ziplink
+
+x-app: &app
+  build: ./Backend
+  env_file: ./Backend/.env
+  environment:
+    MONGO_URI: mongodb://mongo:27017/ziplink
+    REDIS_URL: redis://redis:6379
+    # The public address is Nginx. Short links, the frontend and the Google callback all live there.
+    APP_URL: http://localhost:8080
+    FRONTEND_URL: http://localhost:8080
+    GOOGLE_CALLBACK_URL: http://localhost:8080/api/auth/google/callback
+    # One proxy (Nginx) sits in front, so the real visitor address is in X-Forwarded-For.
+    TRUST_PROXY: "1"
+  depends_on:
+    mongo:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+  # Time for the app to write queued clicks to MongoDB after SIGTERM.
+  stop_grace_period: 15s
+
+services:
+  # Three identical copies. They hold no state, so Nginx can send any request to any of them.
+  app1:
+    <<: *app
+  app2:
+    <<: *app
+  app3:
+    <<: *app
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - app1
+      - app2
+      - app3
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    # appendonly keeps the queued clicks if Redis restarts before they were written to MongoDB.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+  redis-data:

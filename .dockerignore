@@ -1,0 +1,8 @@
+# Used when building the nginx image, whose context is the repository root.
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+.git
+Backend
