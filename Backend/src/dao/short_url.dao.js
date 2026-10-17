@@ -1,9 +1,11 @@
 import ShortUrl from "../models/short_url.model.js";
 
-export const saveShortUrl = async(shortUrl,longUrl,userId)=> {
+export const saveShortUrl = async({shortUrl,longUrl,userId,expiresAt,activeFrom})=> {
     const newUrl= new ShortUrl({
         full_url:longUrl,
-        short_url:shortUrl
+        short_url:shortUrl,
+        expiresAt,
+        activeFrom
     })
     if(userId){
         newUrl.user=userId
