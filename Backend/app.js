@@ -16,8 +16,8 @@ app.get("/:id", redirectFromShortUrl)
 const startServer = async () => {
     await connectDB();
 
-    app.listen(5000, () => {
-        console.log("Server is running on http://localhost:5000");
+    app.listen(config.PORT, () => {
+        console.log(`Server is running on http://localhost:${config.PORT}`);
     });
 };
 
