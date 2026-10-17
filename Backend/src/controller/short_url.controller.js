@@ -1,18 +1,13 @@
 import { createShortUrlService } from "../services/short_url.service.js";
 import { getShortUrl } from "../dao/short_url.dao.js";
+import { AppError } from "../Utils/errorHandler.js";
+import config from "../config/config.js";
 
 export const createShortUrlController = async (req, res) => {
-    const { url } = req.body;
+    const url = req.body?.url;
 
-    try {
-        const shortUrl = await createShortUrlService(url);
-        return res.status(201).send(process.env.APP_URL + "/" + shortUrl);
-    } catch (error) {
-        console.error("Failed to create short URL:", error.message);
-        return res
-            .status(error.statusCode || 500)
-            .json({ error: error.statusCode ? error.message : "Failed to create short URL." });
-    }
+    const shortUrl = await createShortUrlService(url);
+    return res.status(201).send(config.APP_URL + "/" + shortUrl);
 };
 export const redirectFromShortUrl = async (req, res) => {
     const { id } = req.params;
