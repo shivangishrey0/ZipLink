@@ -4,7 +4,7 @@ import { validateSlug } from "../Utils/validateSlug.js";
 import { validateDates } from "../Utils/validateDates.js";
 import { AppError } from "../Utils/errorHandler.js";
 import config from "../config/config.js";
-import { saveShortUrl, getShortUrl, incrementClicks, findUrlsByUser, countUrlsByUser } from "../dao/short_url.dao.js";
+import { saveShortUrl, getShortUrl, incrementClicks, findUrlsByUser, countUrlsByUser, findUrlByIdAndUser, updateUrl, deleteUrlByIdAndUser } from "../dao/short_url.dao.js";
 
 const MAX_ATTEMPTS = 5;
 const DEFAULT_LIMIT = 10;
@@ -103,4 +103,51 @@ export const getUserUrlsService = async (userId, { page, limit }) => {
         total,
         totalPages: Math.ceil(total / pageSize),
     };
+};
+
+export const updateUserUrlService = async (id, userId, { url, activeFrom, expiresAt }) => {
+    // The query includes the owner, so someone else's link looks the same as a missing one.
+    const link = await findUrlByIdAndUser(id, userId);
+
+    if (!link) {
+        throw new AppError("URL not found", 404);
+    }
+
+    const changes = {};
+
+    if (url !== undefined) {
+        changes.full_url = validateUrl(url);
+    }
+
+    // Sending null or an empty value clears a date, leaving it out keeps the old one.
+    const dates = validateDates(activeFrom, expiresAt);
+
+    if (activeFrom !== undefined) {
+        changes.activeFrom = dates.activeFrom ?? null;
+    }
+
+    if (expiresAt !== undefined) {
+        changes.expiresAt = dates.expiresAt ?? null;
+    }
+
+    if (Object.keys(changes).length === 0) {
+        throw new AppError("Nothing to update.", 400);
+    }
+
+    const finalActiveFrom = "activeFrom" in changes ? changes.activeFrom : link.activeFrom;
+    const finalExpiresAt = "expiresAt" in changes ? changes.expiresAt : link.expiresAt;
+
+    if (finalActiveFrom && finalExpiresAt && finalActiveFrom >= finalExpiresAt) {
+        throw new AppError("activeFrom must be before expiresAt.", 400);
+    }
+
+    return toPublicUrl(await updateUrl(link, changes));
+};
+
+export const deleteUserUrlService = async (id, userId) => {
+    const deleted = await deleteUrlByIdAndUser(id, userId);
+
+    if (!deleted) {
+        throw new AppError("URL not found", 404);
+    }
 };

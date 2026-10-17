@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import ShortUrl from "../models/short_url.model.js";
 
 export const saveShortUrl = async({shortUrl,longUrl,userId,expiresAt,activeFrom})=> {
@@ -24,4 +25,16 @@ export const findUrlsByUser=async(userId,skip,limit)=>{
 }
 export const countUrlsByUser=async(userId)=>{
     return await ShortUrl.countDocuments({user:userId})
+}
+export const findUrlByIdAndUser=async(id,userId)=>{
+    if(!mongoose.isValidObjectId(id)) return null
+    return await ShortUrl.findOne({_id:id,user:userId})
+}
+export const updateUrl=async(url,changes)=>{
+    url.set(changes)
+    return await url.save()
+}
+export const deleteUrlByIdAndUser=async(id,userId)=>{
+    if(!mongoose.isValidObjectId(id)) return null
+    return await ShortUrl.findOneAndDelete({_id:id,user:userId})
 }
