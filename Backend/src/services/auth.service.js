@@ -1,10 +1,17 @@
 import argon2 from "argon2";
 import { AppError } from "../Utils/errorHandler.js";
 import { signToken } from "../Utils/jwtHelper.js";
-import { createUser, findUserByEmailWithPassword } from "../dao/user.dao.js";
+import {
+    createUser,
+    findUserByEmail,
+    findUserByEmailWithPassword,
+    findUserByGoogleId,
+} from "../dao/user.dao.js";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DUPLICATE_KEY = 11000;
+const EMAIL_REGISTERED_MESSAGE =
+    "This email is already registered with a password. Log in with your password instead.";
 
 // Verified when the email is unknown, so a missing account takes as long as a wrong password.
 const DUMMY_HASH = await argon2.hash("dummy-password");
@@ -58,6 +65,35 @@ export const loginService = async ({ email, password }) => {
 
     if (!user?.password || !matches) {
         throw invalid;
+    }
+
+    return { user: toPublicUser(user), token: issueToken(user) };
+};
+
+export const googleLoginService = async ({ googleId, email, name }) => {
+    let user = await findUserByGoogleId(googleId);
+
+    if (!user) {
+        // Sign-ups here never verify the email. Linking by email would let someone who registered
+        // with another person's address take over that person's Google login.
+        if (await findUserByEmail(email.toLowerCase())) {
+            throw new AppError(EMAIL_REGISTERED_MESSAGE, 409);
+        }
+
+        try {
+            user = await createUser({ name, email, googleId });
+        } catch (error) {
+            if (error.code !== DUPLICATE_KEY) {
+                throw error;
+            }
+
+            // Two callbacks for the same Google account raced, the other one created the user.
+            user = await findUserByGoogleId(googleId);
+
+            if (!user) {
+                throw new AppError(EMAIL_REGISTERED_MESSAGE, 409);
+            }
+        }
     }
 
     return { user: toPublicUser(user), token: issueToken(user) };

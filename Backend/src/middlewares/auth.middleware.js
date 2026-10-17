@@ -1,6 +1,7 @@
 import { AppError } from "../Utils/errorHandler.js";
 import { verifyToken } from "../Utils/jwtHelper.js";
 import { findUserById } from "../dao/user.dao.js";
+import config from "../config/config.js";
 
 const getUserFromCookie = async (req) => {
     const token = req.cookies?.accessToken;
@@ -30,5 +31,13 @@ export const requireAuth = async (req, res, next) => {
 
 export const optionalAuth = async (req, res, next) => {
     req.user = await getUserFromCookie(req);
+    next();
+};
+
+export const requireGoogleConfig = (req, res, next) => {
+    if (!config.GOOGLE_ENABLED) {
+        throw new AppError("Google sign-in is not configured.", 503);
+    }
+
     next();
 };
