@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const required = ["MONGO_URI", "APP_URL"];
+const required = ["MONGO_URI", "APP_URL", "JWT_SECRET"];
 
 for (const name of required) {
     if (!process.env[name]) {
@@ -11,6 +11,8 @@ for (const name of required) {
 }
 
 const config = {
+    NODE_ENV: process.env.NODE_ENV || "development",
+    JWT_SECRET: process.env.JWT_SECRET,
     PORT: process.env.PORT || 5000,
     MONGO_URI: process.env.MONGO_URI,
     APP_URL: process.env.APP_URL?.replace(/\/+$/, ""),
