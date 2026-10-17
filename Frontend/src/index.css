@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+/* Every colour is a token. Light values here, dark values redefine the same names below. */
+:root {
+  --bg: #f2f5f9;
+  --surface: #ffffff;
+  --ink: #0f2238;
+  --muted: #5b6b7f;
+  --line: #d9e0ea;
+  --brand: #0b8f7e;
+  --brand-ink: #ffffff;
+  --brand-soft: #d9f3ee;
+  --danger: #c8362b;
+  --danger-soft: #fde4e1;
+  --warn: #9a5b00;
+  --warn-soft: #fff0d1;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1624;
+    --surface: #122236;
+    --ink: #e8eef6;
+    --muted: #93a3b8;
+    --line: #243750;
+    --brand: #2fd0b8;
+    --brand-ink: #06251f;
+    --brand-soft: #123a3a;
+    --danger: #ff8479;
+    --danger-soft: #3b1b1c;
+    --warn: #f2b552;
+    --warn-soft: #3a2c0b;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-soft: var(--brand-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+@utility card {
+  @apply rounded-xl border border-line bg-surface p-5 sm:p-6;
+}
+
+@utility btn {
+  @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+@utility btn-primary {
+  @apply btn bg-brand text-brand-ink hover:opacity-90;
+}
+
+@utility btn-ghost {
+  @apply btn border border-line bg-surface text-ink hover:bg-bg;
+}
+
+@utility btn-danger {
+  @apply btn border border-line bg-surface text-danger hover:bg-danger-soft;
+}
+
+@utility input {
+  @apply w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-sm text-ink placeholder:text-muted focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30;
+}
+
+@utility label {
+  @apply mb-1.5 block text-sm font-medium text-ink;
+}
+
+@utility error-text {
+  @apply rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger;
+}
