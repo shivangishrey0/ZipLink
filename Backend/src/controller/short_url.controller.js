@@ -12,18 +12,13 @@ export const createShortUrlController = async (req, res) => {
 export const redirectFromShortUrl = async (req, res) => {
     const { id } = req.params;
 
-    try {
-        const url = await getShortUrl(id);
+    const url = await getShortUrl(id);
 
-        if (!url) {
-            return res.status(404).send("URL not found");
-        }
-
-        url.clicks++;
-        await url.save();
-        return res.redirect(url.full_url);
-    } catch (error) {
-        console.error("Failed to redirect short URL:", error.message);
-        return res.status(500).send("Failed to redirect short URL");
+    if (!url) {
+        throw new AppError("URL not found", 404);
     }
+
+    url.clicks++;
+    await url.save();
+    return res.redirect(url.full_url);
 };
