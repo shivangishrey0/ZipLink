@@ -24,3 +24,14 @@ export const formatDateTime = (value) => {
     minute: "2-digit",
   });
 };
+
+// <input type="datetime-local"> works with local time without a zone ("2026-10-17T18:30").
+export const toDateTimeLocal = (value) => {
+  if (!value) return "";
+
+  const date = new Date(value);
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+  return date.toISOString().slice(0, 16);
+};
+
+export const fromDateTimeLocal = (value) => new Date(value).toISOString();
