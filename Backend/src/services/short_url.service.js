@@ -1,20 +1,22 @@
 import { generateNanoId } from "../Utils/helper.js";
 import { validateUrl } from "../Utils/validateUrl.js";
 import { validateSlug } from "../Utils/validateSlug.js";
+import { validateDates } from "../Utils/validateDates.js";
 import { AppError } from "../Utils/errorHandler.js";
 import { saveShortUrl } from "../dao/short_url.dao.js";
 
 const MAX_ATTEMPTS = 5;
 const DUPLICATE_KEY = 11000;
 
-export const createShortUrlService = async ({ url, slug }) => {
+export const createShortUrlService = async ({ url, slug, activeFrom, expiresAt }) => {
     const validUrl = validateUrl(url);
+    const dates = validateDates(activeFrom, expiresAt);
 
     if (slug) {
         validateSlug(slug);
 
         try {
-            await saveShortUrl({ shortUrl: slug, longUrl: validUrl });
+            await saveShortUrl({ shortUrl: slug, longUrl: validUrl, ...dates });
             return slug;
         } catch (error) {
             if (error.code === DUPLICATE_KEY) {
@@ -28,7 +30,7 @@ export const createShortUrlService = async ({ url, slug }) => {
         const shortUrl = generateNanoId(7);
 
         try {
-            await saveShortUrl({ shortUrl, longUrl: validUrl });
+            await saveShortUrl({ shortUrl, longUrl: validUrl, ...dates });
             return shortUrl;
         } catch (error) {
             if (error.code !== DUPLICATE_KEY) {
