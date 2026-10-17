@@ -4,9 +4,9 @@ import { AppError } from "../Utils/errorHandler.js";
 import config from "../config/config.js";
 
 export const createShortUrlController = async (req, res) => {
-    const url = req.body?.url;
+    const { url, slug } = req.body ?? {};
 
-    const shortUrl = await createShortUrlService(url);
+    const shortUrl = await createShortUrlService({ url, slug });
     return res.status(201).send(config.APP_URL + "/" + shortUrl);
 };
 export const redirectFromShortUrl = async (req, res) => {
