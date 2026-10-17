@@ -51,10 +51,14 @@ services:
 
   mongo:
     image: mongo:7
+    # --quiet stops MongoDB from logging every connection it accepts and closes.
+    command: ["--quiet"]
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      # Only checks that MongoDB is listening. Running mongosh every 5 seconds opened several
+      # connections each time and filled the log with them.
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/27017'"]
       interval: 5s
       timeout: 5s
       retries: 20
