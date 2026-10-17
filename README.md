@@ -1,35 +1,82 @@
-# ZipLink
+ZipLink
+=======
 
-ZipLink is a URL shortener. You paste a long address and get a short one that redirects to it. You can protect a link with a password, choose when it opens and closes, get a QR code, and see how many people clicked and on what kind of device.
+A URL shortener built with the MERN stack. Create short links with password protection, expiration dates, QR codes and click analytics. Redis speeds up redirects, and Nginx spreads the traffic across three Express instances.
 
-It is built with React, Express and MongoDB. Redis makes redirects fast, and Nginx spreads the traffic over three copies of the backend. Everything starts with one Docker Compose command.
+Features
+--------
 
-## Features
+### Core Functionality
 
-- Shorten any http or https address, with a random code or your own (3 to 30 letters, numbers, dash or underscore)
-- QR code for every new link
-- Optional password on a link
-- Optional start date and end date. Before the start and after the end, visitors see a friendly page instead of the destination
-- Sign up with email and password, or with Google
-- A list of your links, where you can edit the destination and dates, or delete a link
-- Analytics per link: total clicks, clicks per day for the last 30 days, and clicks by device (desktop, mobile, tablet)
-- Rate limits on login, sign-up, link creation and password attempts
+- **URL Shortening** - Turn long http and https addresses into short links
+- **Custom Short URLs** - Choose your own code (optional)
+- **QR Code Generation** - A QR code for every new link
+- **Anonymous Links** - Create links without an account
 
-You can create links without an account. They just cannot be edited or analysed later.
+### Security & Control
 
-## Technology
+- **Password Protection** - Ask visitors for a password
+- **Link Expiration** - Set an end date
+- **Active Date Control** - Set a start date
+- **Link Management** - Edit and delete your links
+- **Rate Limiting** - Limit sign-ups, logins, link creation and password guesses
 
-| Part | What is used |
-| --- | --- |
-| Frontend | React 19, Vite, Tailwind CSS, TanStack Router and Query, Redux Toolkit, Recharts, Axios |
-| Backend | Node.js 22, Express 5, Mongoose |
-| Database | MongoDB 7 |
-| Cache and queue | Redis 7 |
-| Login | Argon2 password hashing, JWT in an HTTP-only cookie, Passport for Google |
-| Entry point | Nginx |
-| Packaging | Docker and Docker Compose |
+### User Authentication
 
-## How it works
+- **Email/Password Authentication** - Sign up and log in with hashed passwords (Argon2)
+- **Google OAuth** - Sign in with Google (optional)
+- **JWT Authentication** - Session management with HTTP-only cookies
+- **Protected Routes** - My links and analytics need a login
+
+### Analytics Dashboard
+
+- **Click Tracking** - Total clicks for each link
+- **Device Breakdown** - Desktop, mobile and tablet clicks
+- **Daily Trends** - Clicks per day for the last 30 days
+- **Link Statistics** - Destination, status, dates and password setting
+
+### Performance and Reliability
+
+- **Redis Caching** - Redirects are answered from memory
+- **Queued Click Counting** - Clicks are queued and saved to MongoDB in batches
+- **Load Balancing** - Nginx shares requests between three Express instances
+- **Graceful Fallback** - Links and logins keep working when Redis is down
+
+Tech Stack
+----------
+
+### Frontend
+
+- **React 19** - UI framework
+- **Vite** - Build tool and dev server
+- **TanStack Router** - Routing
+- **TanStack Query** - Server state management
+- **Redux Toolkit** - Login state management
+- **Tailwind CSS** - Utility-first styling
+- **Recharts** - Data visualization
+- **Axios** - HTTP client
+- **Lucide React** - Icon library
+
+### Backend
+
+- **Node.js 22** - Runtime environment
+- **Express 5** - Web framework
+- **MongoDB** - Database
+- **Mongoose** - ODM for MongoDB
+- **Redis** - Cache, click queue and rate limit counters
+- **Passport.js** - Google sign-in
+- **JWT** - Token-based authentication
+- **Argon2** - Password hashing
+- **NanoID** - Short code generation
+- **QRCode** - QR code generation
+
+### Infrastructure
+
+- **Nginx** - Entry point, load balancer and web server for the React app
+- **Docker Compose** - Runs all services together
+
+Architecture
+------------
 
 ```mermaid
 flowchart LR
@@ -54,349 +101,476 @@ flowchart LR
     Backend -. "checks the sign-in code" .-> Google
 ```
 
-### What each part does
+### Components
 
-| Part | Responsibility |
-| --- | --- |
-| React app | The pages you see. It is built once and served by Nginx. |
-| Nginx | The single public address. It serves the React files and sends API calls and short links to the Express copies in turn (round robin). If a copy fails, it tries the next one. |
-| Express copies | All the logic: login, creating links, redirects, analytics. They keep nothing in memory, so any copy can answer any request. |
-| Redis | Remembers links so redirects skip the database, holds a queue of clicks waiting to be saved, and counts requests for the rate limits. |
-| MongoDB | The permanent store for users, links and click records. |
-| Google | Confirms who a person is when they use Google sign-in. |
+- React App - The pages users see, served by Nginx
+- Nginx - The public address on port 8080, serves the React app and shares requests between the Express instances
+- Express (three instances) - Login, links, redirects and analytics, with no state kept in memory
+- Redis - Link cache, click queue and rate limit counters
+- MongoDB - Users, links and click records
+- Google OAuth - Confirms who a person is for Google sign-in
 
-### Opening a short link
+### Opening a Short Link
 
-1. The browser asks Nginx for `/aB3xK9q`.
-2. Nginx passes the request to the next Express copy.
-3. Express looks the code up in Redis. If it is not there, it reads MongoDB and stores the answer in Redis for 10 minutes.
-4. Express checks the link dates and password setting. If the link is fine, it adds a click event to a Redis queue and answers with a redirect to the destination. If the link has expired, has not started yet, or needs a password, it sends the browser to a page of the React app.
-5. Every 5 seconds, each Express copy takes waiting click events from the queue and saves them to MongoDB in one batch.
+1. The browser asks Nginx for the short code.
+2. Nginx passes the request to the next Express instance.
+3. Express reads the link from Redis, or from MongoDB on a miss (cached for 10 minutes).
+4. Express queues the click in Redis and answers with a 302 redirect. Expired, not yet active and password protected links go to a page of the React app.
+5. Every 5 seconds each instance saves the queued clicks to MongoDB in one batch.
 
-The redirect uses status 302, not 301. Browsers remember a 301 forever and would stop asking the server, so clicks could no longer be counted.
+### Creating a Link
 
-### Creating a link
+1. Express checks the rate limit and validates the URL.
+2. Express makes the short code, hashes the password if one is set, and saves the link in MongoDB.
+3. Express returns the short URL and a QR code.
 
-The browser sends the address to Nginx, which passes it to Express. Express checks the rate limit, checks that the address is a valid http or https URL, makes a short code (or checks your custom one), hashes the password if there is one, and saves the link in MongoDB. MongoDB's unique index decides if a code is taken. If a random code collides, Express tries another one.
+### Logging In
 
-### Logging in
+1. Express checks the password with Argon2.
+2. Express sends a JWT in an HTTP-only cookie.
+3. Any instance can verify the cookie on later requests.
 
-Express checks the password with Argon2 and signs a token (JWT). The token is stored in an HTTP-only cookie, so page scripts cannot read it. Every later request carries the cookie, and any Express copy can verify it. That is why the copies can be swapped freely.
+### Google Sign-in
 
-### Google sign-in
+1. The browser opens `/api/auth/google` and Express redirects it to Google.
+2. Google sends the browser back to the callback address with a one-time code.
+3. Express checks a random state value, exchanges the code for the profile, and sets the login cookie.
 
-1. The browser opens `/api/auth/google`. Express creates a random value, saves it in a short-lived cookie, and redirects the browser to Google.
-2. The person signs in on Google's own page. The app never sees their Google password.
-3. Google sends the browser back to the callback address with a one-time code.
-4. Express checks that the random value matches the cookie, then trades the code for the person's profile by talking to Google directly with the client secret.
-5. Express finds or creates the user, sets the same login cookie as a normal login, and sends the browser to the React app.
-
-If an email is already registered with a password, Google sign-in for that email is refused. Sign-up does not verify email addresses, so linking the two would let someone take over an account.
-
-## Project structure
+Project Structure
+-----------------
 
 ```
 ZipLink/
-  Backend/               Express API
-    src/routes           URL paths
-    src/controller       Reads the request, sends the response
-    src/services         The rules (validation, links, auth, clicks, analytics)
-    src/dao              The only code that talks to MongoDB
-    src/models           MongoDB schemas
-    src/middlewares      Login check and rate limits
-    src/config           Settings, MongoDB, Redis, Google
-  Frontend/              React app
-  nginx/                 Nginx settings and the image that builds the React app
-  docker-compose.yml     The whole system
-  DEPLOYMENT.md          Notes for running it for real
+├── Backend/                 Express API
+│   ├── .env.example         Template for environment variables
+│   ├── app.js               Express app entry point
+│   ├── Dockerfile           Backend image
+│   ├── package.json
+│   └── src/
+│       ├── config/          Configuration files
+│       │   ├── config.js
+│       │   ├── mongo.config.js
+│       │   ├── passport.config.js
+│       │   └── redis.config.js
+│       ├── controller/      Request handlers
+│       │   ├── analytics.controller.js
+│       │   ├── auth.controller.js
+│       │   ├── short_url.controller.js
+│       │   └── user_url.controller.js
+│       ├── dao/             Data Access Objects
+│       │   ├── click.dao.js
+│       │   ├── short_url.dao.js
+│       │   └── user.dao.js
+│       ├── middlewares/     Login check and rate limits
+│       │   ├── auth.middleware.js
+│       │   └── rateLimit.middleware.js
+│       ├── models/          Database schemas
+│       │   ├── click.model.js
+│       │   ├── short_url.model.js
+│       │   └── user.model.js
+│       ├── routes/          API routes
+│       │   ├── analytics.route.js
+│       │   ├── auth.route.js
+│       │   ├── protected.route.js
+│       │   ├── short_url.route.js
+│       │   └── user.route.js
+│       ├── services/        Business logic
+│       │   ├── analytics.service.js
+│       │   ├── auth.service.js
+│       │   ├── click.service.js
+│       │   └── short_url.service.js
+│       └── Utils/           Helper functions
+│           ├── cache.js
+│           ├── errorHandler.js
+│           ├── generateQrCode.js
+│           ├── getDeviceType.js
+│           ├── helper.js
+│           ├── jwtHelper.js
+│           ├── validateDates.js
+│           ├── validateSlug.js
+│           └── validateUrl.js
+├── Frontend/                React app
+│   ├── .env.example         Template for environment variables
+│   ├── index.html
+│   ├── package.json
+│   ├── vite.config.js
+│   └── src/
+│       ├── index.css        Global styles and theme
+│       ├── main.jsx         App entry point
+│       ├── RootLayout.jsx   Root layout component
+│       ├── api/             API client functions
+│       │   ├── ShortUrl.api.jsx
+│       │   └── User.api.jsx
+│       ├── components/      Reusable components
+│       │   ├── CopyButton.jsx
+│       │   ├── EditLinkModal.jsx
+│       │   ├── GoogleAuthButton.jsx
+│       │   ├── LoginForm.jsx
+│       │   ├── NavBar.jsx
+│       │   ├── RegisterForm.jsx
+│       │   ├── RequireAuth.jsx
+│       │   ├── StatusBadge.jsx
+│       │   ├── UrlForm.jsx
+│       │   ├── UserUrls.jsx
+│       │   └── Analytics/   Analytics charts and cards
+│       │       ├── DailyClicksChart.jsx
+│       │       ├── DeviceBreakdownChart.jsx
+│       │       ├── EmptyAnalytics.jsx
+│       │       ├── LinkInfoCard.jsx
+│       │       └── StatCard.jsx
+│       ├── pages/           Page components
+│       │   ├── AnalyticsPage.jsx
+│       │   ├── AuthPage.jsx
+│       │   ├── ExpiredLinkPage.jsx
+│       │   ├── GoogleCallbackPage.jsx
+│       │   ├── HomePage.jsx
+│       │   ├── LinkNotActive.jsx
+│       │   ├── NotFoundPage.jsx
+│       │   ├── ProtectedLinkPage.jsx
+│       │   └── UrlsPage.jsx
+│       ├── routing/         Route definitions
+│       │   └── index.jsx
+│       ├── store/           Redux store
+│       │   ├── store.js
+│       │   └── slice/
+│       │       └── authSlice.js
+│       └── utils/           Utility functions
+│           ├── axiosInstance.js
+│           └── helper.js
+├── nginx/                   Load balancer and web server
+│   ├── Dockerfile           Builds the React app into the Nginx image
+│   └── nginx.conf           Routing and load balancing rules
+├── docker-compose.yml       Runs the whole system
+├── DEPLOYMENT.md            Notes for running ZipLink for real
+└── README.md
 ```
 
-## Run it with Docker Compose
+Installation and Setup
+----------------------
 
-This is the recommended way. It starts everything.
+### Prerequisites
 
-You need Docker Desktop (or Docker Engine with the Compose plugin).
+- Docker Desktop - For Docker Compose (recommended)
+- Node.js 22 and MongoDB - To run without Docker
+- Redis - Optional
+- Google OAuth credentials - Optional
 
-1. Create the backend settings file.
+### Run with Docker Compose
 
-   ```
-   cp Backend/.env.example Backend/.env
-   ```
+1. Create the environment file with `cp Backend/.env.example Backend/.env` and set `JWT_SECRET`.
+2. Build and start the system with `docker compose up --build`.
+3. Open http://localhost:8080
 
-2. Open `Backend/.env` and fill in `JWT_SECRET`. Generate a value with:
+Docker Compose sets `MONGO_URI`, `REDIS_URL`, `APP_URL`, `FRONTEND_URL`, `GOOGLE_CALLBACK_URL` and `TRUST_PROXY` itself. Only the secrets come from `Backend/.env`.
 
-   ```
-   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-   ```
+### Backend Setup
 
-   Leave the Google values empty for now. Everything except Google sign-in works without them.
+1. Go to the backend directory with `cd Backend`.
+2. Install dependencies with `npm install`.
+3. Create the environment file with `cp .env.example .env` and set `JWT_SECRET`.
+4. Start the development server with `npm run dev`.
 
-3. Start the system.
+The backend runs at http://localhost:5000.
 
-   ```
-   docker compose up --build
-   ```
+### Frontend Setup
 
-4. Open http://localhost:8080
+1. Go to the frontend directory with `cd Frontend`.
+2. Install dependencies with `npm install`.
+3. Start the development server with `npm run dev`.
 
-The first build downloads images and takes a few minutes.
+The frontend runs at http://localhost:5173. It must use this port, because the backend only accepts requests from it.
 
-Docker Compose sets its own values for `MONGO_URI`, `REDIS_URL`, `APP_URL`, `FRONTEND_URL`, `GOOGLE_CALLBACK_URL` and `TRUST_PROXY`, and these replace the ones in `Backend/.env`. Only the secrets are read from that file.
+### Google OAuth Setup
 
-The address you use is always http://localhost:8080. Short links look like `http://localhost:8080/aB3xK9q`.
+1. Create an OAuth client of type Web application in Google Cloud Console.
+2. Add the callback address under Authorized redirect URIs, not under Authorized JavaScript origins. Use `http://localhost:8080/api/auth/google/callback` for Docker Compose and `http://localhost:5000/api/auth/google/callback` without Docker.
+3. Add the credentials to `Backend/.env`:
+   - `GOOGLE_CLIENT_ID=your_google_client_id`
+   - `GOOGLE_CLIENT_SECRET=your_google_client_secret`
+   - `GOOGLE_CALLBACK_URL=http://localhost:8080/api/auth/google/callback`
 
-## Run it without Docker
+4. Restart the backend with `docker compose up -d --build`.
 
-Use this if you want to work on the code. You need Node.js 22 and a MongoDB server running on your machine. Redis is optional. Without it, the app works but has no cache and no rate limits.
+Keep the credentials in `Backend/.env` only. Never commit them.
 
-Backend:
+Environment Variables
+---------------------
+
+The backend reads `Backend/.env`. Create it from the example file with `cp Backend/.env.example Backend/.env`, then fill in the empty values. `JWT_SECRET` is required.
+
+### Server Configuration
+
+- `PORT=5000`
+- `NODE_ENV=development`
+
+### Database
+
+- `MONGO_URI=mongodb://localhost:27017/ziplink`
+
+### Public Addresses
+
+- `APP_URL=http://localhost:5000`
+- `FRONTEND_URL=http://localhost:5173`
+
+### JWT Secret
+
+- `JWT_SECRET=` (required)
+
+Generate one with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`.
+
+### Redis
+
+- `REDIS_URL=` (optional, leave empty to run without it)
+
+### Proxy
+
+- `TRUST_PROXY=0` (use 1 behind Nginx, otherwise 0)
+
+### Google Credentials
+
+Optional. All three values are needed together.
+
+- `GOOGLE_CLIENT_ID=`
+- `GOOGLE_CLIENT_SECRET=`
+- `GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback`
+
+### Frontend Settings
+
+The frontend reads one optional variable from `Frontend/.env`. Never put a secret in a `VITE_` variable.
+
+- `VITE_API_URL=http://localhost:5000`
+
+Docker Compose Commands
+-----------------------
+
+### Start and Stop
+
+- `docker compose up --build` - Build and start, showing logs
+- `docker compose up -d --build` - Build and start in the background
+- `docker compose stop` - Stop, keeping all data
+- `docker compose start` - Start again
+- `docker compose down` - Remove containers, keeping data
+- `docker compose down -v` - Remove containers and delete all data
+- `docker compose up -d --build nginx` - Rebuild only React and Nginx
+- `docker compose up -d --build app1 app2 app3` - Rebuild only the backend instances
+
+### Inspect
+
+- `docker compose ps` - See what is running
+- `docker compose logs -f` - Follow all logs
+- `docker compose logs -f app1` - Follow one service
+- `docker compose exec redis redis-cli llen clicks:queue` - Count clicks waiting in the queue
+- `docker compose exec redis redis-cli keys "link:*"` - List cached links
+- `docker compose exec mongo mongosh ziplink --eval "db.shorturls.countDocuments()"` - Count links in MongoDB
+- `docker compose exec mongo mongosh ziplink --eval "db.clicks.countDocuments()"` - Count click records in MongoDB
+- `curl -sI http://localhost:8080/api/auth/check` - See which instance answers (look at the X-Upstream line)
+
+On Windows PowerShell, use `curl.exe` instead of `curl`.
+
+API Endpoints
+-------------
+
+### Authentication
+
+- `POST /api/auth/register` - Create an account
+- `POST /api/auth/login` - Log in
+- `POST /api/auth/logout` - Log out
+- `GET /api/auth/check` - Who is logged in (login needed)
+- `GET /api/auth/google` - Start Google sign-in
+- `GET /api/auth/google/callback` - Google sends the browser back here
+
+### URL Management
+
+- `POST /api/create` - Create a short link, returns the short URL and a QR code
+- `GET /api/user/urls?page=1&limit=10` - List your links (login needed)
+- `PUT /api/user/urls/:id` - Change destination or dates (login needed)
+- `DELETE /api/user/urls/:id` - Delete a link (login needed)
+- `POST /api/protected/:code/unlock` - Send a password, get the destination
+- `GET /:code` - The short link itself, redirects
+
+### Analytics
+
+- `GET /api/analytics/:code` - Clicks, daily chart data and devices (login needed)
+
+### Rate Limits
+
+- Register and login share 10 requests per 15 minutes
+- Link creation allows 30 requests per minute
+- Password attempts allow 10 requests per 15 minutes for each link
+
+Limits are counted per visitor address. When one is hit, the answer is status 429 with a `Retry-After` header.
+
+### Reserved Short Codes
+
+These cannot be used as custom codes: `api`, `login`, `register`, `urls`, `analytics`, `auth`, `expired`, `not-active`, `protected` and `assets`.
+
+Usage
+-----
+
+### Creating a Short URL
+
+1. Open the home page. No account is needed.
+2. Paste your URL, including `http://` or `https://`.
+3. Optional: open More options to set a code, a password, a start date or an end date.
+4. Press Shorten URL, then copy the link or download the QR code.
+
+### Viewing Analytics
+
+1. Log in and open My links.
+2. Press Analytics on a link.
+
+### Password-Protected Links
+
+1. Set a password under More options.
+2. Visitors enter it on the password page before they reach the destination.
+
+### Link Expiration and Start Dates
+
+1. Set Expires at, Active from, or both under More options.
+2. Change them later with Edit in My links.
+
+Testing Checklist
+-----------------
+
+Start the system with Docker Compose and open http://localhost:8080.
+
+### Registration and Email Login
+
+- Register with a name, an email and a password of 8 or more characters
+- Register the same email again and expect "This email is already registered."
+- Log in with a wrong password and expect "Invalid email or password."
+- Open `/urls` while logged out and expect the login page
+
+### Google Sign-in
+
+This needs your own Google credentials.
+
+- Press Continue with Google and expect to land on My links
+- Sign in again and expect the same account
+- Use an email that already has a password account and expect an error on the login page
+
+### Link Creation and Redirects
+
+- Create a link and expect a short URL and a QR code
+- Open the short link and expect the destination
+- Reuse a custom code and expect "already taken". Try `login` and expect "reserved"
+- Open a password link in a private window. A wrong password shows an error, the right one redirects
+- Open an expired link and a not yet active link and expect their pages
+- Edit a destination and expect the redirect to change right away
+- Delete a link and expect "URL not found"
+
+### Analytics
+
+- Open a link a few times, wait 10 seconds, and check its Analytics page
+- Open Analytics for a link with no visits and expect the empty message
+
+### Rate Limiting
+
+Send 11 wrong login attempts in a row:
 
 ```
-cd Backend
-cp .env.example .env        # then fill in JWT_SECRET
-npm install
-npm run dev
+for i in $(seq 11); do
+  curl -s -o /dev/null -w "%{http_code} " \
+    -X POST http://localhost:8080/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"nobody@example.com","password":"wrongwrong"}'
+done
 ```
 
-Frontend, in a second terminal:
-
-```
-cd Frontend
-npm install
-npm run dev
-```
+- Expect ten 401 answers, then 429
+- Reset the counters with `docker compose exec redis redis-cli flushall`, which also clears the cache and the click queue
 
-Open http://localhost:5173. The backend runs at http://localhost:5000.
-
-The frontend must run on port 5173, because the backend only accepts requests from that address.
-
-## Environment variables
-
-Backend, in `Backend/.env`:
-
-| Name | Needed | Meaning |
-| --- | --- | --- |
-| `JWT_SECRET` | Yes | Long random text that signs login tokens. The app does not start without it. |
-| `MONGO_URI` | Yes | MongoDB address. |
-| `APP_URL` | Yes | Address that short links start with. |
-| `FRONTEND_URL` | No | Address of the React app. Default `http://localhost:5173`. |
-| `PORT` | No | Backend port. Default `5000`. |
-| `REDIS_URL` | No | Redis address. Empty means no cache and no rate limits. |
-| `TRUST_PROXY` | No | Number of proxies in front of the backend. Use `1` behind Nginx, otherwise `0`. |
-| `NODE_ENV` | No | `production` makes cookies Secure, which needs HTTPS. |
-| `GOOGLE_CLIENT_ID` | No | From Google Cloud Console. |
-| `GOOGLE_CLIENT_SECRET` | No | From Google Cloud Console. Keep it private. |
-| `GOOGLE_CALLBACK_URL` | No | Must match a redirect address registered in Google Cloud Console. |
-
-Google sign-in turns on only when all three Google values are set. Variable names are case sensitive on Linux, so write `APP_URL` exactly.
+### System Behaviour
 
-Frontend, in `Frontend/.env` (optional):
-
-| Name | Meaning |
-| --- | --- |
-| `VITE_API_URL` | Address of the backend. Default `http://localhost:5000`. |
-
-Never put a secret in a `VITE_` variable. Everything with that prefix is visible to anyone who opens the site.
+- Repeat `curl -sI http://localhost:8080/api/auth/check` and expect `X-Upstream` to change between three addresses
+- Run `docker compose stop app2` and expect the site to keep working
+- Run `docker compose stop redis` and expect redirects and logins to keep working
 
-## Google sign-in setup
-
-Google sign-in is optional. To turn it on:
+What Has Been Tested
+--------------------
 
-1. Go to https://console.cloud.google.com and create a project (or pick one).
-2. Open the OAuth consent screen section and set it up. While the app is in testing mode, add your own Google account as a test user.
-3. Open the Credentials section and create an OAuth client ID of type Web application.
-4. Under authorized redirect URIs, add the callback address for how you run the app:
+There is no automated test suite. Everything was checked by hand with scripts and a real browser.
 
-   | How you run it | Callback address |
-   | --- | --- |
-   | Docker Compose | `http://localhost:8080/api/auth/google/callback` |
-   | Without Docker | `http://localhost:5000/api/auth/google/callback` |
-
-   The address must match exactly, including the port and no trailing slash. You can add both.
-5. Copy the client ID and client secret into `Backend/.env`:
+### Tested End to End
 
-   ```
-   GOOGLE_CLIENT_ID=...
-   GOOGLE_CLIENT_SECRET=...
-   GOOGLE_CALLBACK_URL=http://localhost:8080/api/auth/google/callback
-   ```
+- Registration, email login and logout
+- Link creation with custom codes, passwords, dates and QR codes
+- Redirects, including expired, not yet active and password protected links
+- My links: list, edit, delete and pagination
+- The analytics page
+- The Redis cache, click queue, rate limits and the fallback when Redis is stopped
+- Docker Compose with Nginx: load spread, one instance stopped, clean shutdown
+- The full browser flow on ports 5173 and 8080 in Microsoft Edge
 
-   Use the callback address that matches how you run the app. With Docker Compose, the compose file already sets `GOOGLE_CALLBACK_URL` to the 8080 address.
-6. Restart the backend (`docker compose up -d --build`, or restart `npm run dev`).
+### Not Tested End to End
 
-Keeping the credentials safe:
+- Signing in with a real Google account. Only the redirect to Google and the callback code were checked, and the port 8080 callback is not registered with Google
+- HTTPS and production settings
+- Scanning a QR code with a phone
+- Browsers other than Edge, and Docker on Linux or macOS
+- Heavy traffic
 
-- Put them only in `Backend/.env`. That file is ignored by Git.
-- Never put them in the Frontend folder, in a `VITE_` variable, in a commit, or in a chat message.
-- If a secret ever leaks, open the credential in Google Cloud Console and create a new secret.
-- Check what Git will commit with `git status` before you commit.
+Known Limitations
+-----------------
 
-## Docker Compose commands
+### Analytics and Click Counting
 
-Run these from the project folder.
+- Analytics can be about 5 seconds behind, because clicks are saved every 5 seconds
+- A crash can lose up to 500 clicks that were taken from the queue but not yet written to MongoDB
+- A batch can be counted twice if its second MongoDB write fails after the first one succeeded
+- `docker compose stop` saves queued clicks first, killing the containers does not
+- When Redis is down, clicks are written to MongoDB directly
+- Days are UTC, and clicks from before analytics existed appear only in the total
+- No location data is recorded
 
-| Goal | Command |
-| --- | --- |
-| Build and start, showing logs | `docker compose up --build` |
-| Build and start in the background | `docker compose up -d --build` |
-| Stop, keeping all data | `docker compose stop` |
-| Start again after a stop | `docker compose start` |
-| Remove containers, keeping data | `docker compose down` |
-| Remove containers and delete all data | `docker compose down -v` |
-| Rebuild only the web part (React and Nginx) | `docker compose up -d --build nginx` |
-| Rebuild only the backend copies | `docker compose up -d --build app1 app2 app3` |
+### Single Points of Failure
 
-Looking inside:
+- Redis: without it there is no cache, no rate limiting and no click queue
+- Nginx: without it the site is unreachable
+- MongoDB: without it most things stop
 
-| Goal | Command |
-| --- | --- |
-| See what is running | `docker compose ps` |
-| Follow all logs | `docker compose logs -f` |
-| Follow one service | `docker compose logs -f app1` |
-| Count clicks waiting in the queue | `docker compose exec redis redis-cli llen clicks:queue` |
-| List cached links | `docker compose exec redis redis-cli keys "link:*"` |
-| Count links in MongoDB | `docker compose exec mongo mongosh ziplink --eval "db.shorturls.countDocuments()"` |
-| Count saved click records | `docker compose exec mongo mongosh ziplink --eval "db.clicks.countDocuments()"` |
-| See which copy answers | `curl -sI http://localhost:8080/api/auth/check` (look at the `X-Upstream` line) |
+### Other
 
-On Windows PowerShell, `curl` is a different command. Use `curl.exe`, or run the examples in Git Bash.
+- Rate limits stop while Redis is down
+- Logging out does not cancel a token, which stays valid for 7 days
+- Google sign-in is refused for an email that already has a password account
+- Emails are not verified and there is no password reset
+- A link's password can only be set when the link is created
+- A short code that does not exist shows a plain error, not a styled page
+- `npm audit` reports 3 high severity advisories from `nodemon`, which is listed under `dependencies`. They are not fixed
 
-## API overview
+Security Features
+-----------------
 
-| Method and path | What it does | Login needed |
-| --- | --- | --- |
-| `POST /api/auth/register` | Create an account | No |
-| `POST /api/auth/login` | Log in | No |
-| `POST /api/auth/logout` | Log out | No |
-| `GET /api/auth/check` | Who am I | Yes |
-| `GET /api/auth/google` | Start Google sign-in | No |
-| `GET /api/auth/google/callback` | Google sends the browser back here | No |
-| `POST /api/create` | Create a short link. Returns the short URL and a QR code | No |
-| `GET /api/user/urls?page=1&limit=10` | List your links | Yes |
-| `PUT /api/user/urls/:id` | Change destination or dates | Yes |
-| `DELETE /api/user/urls/:id` | Delete a link | Yes |
-| `GET /api/analytics/:code` | Analytics for one of your links | Yes |
-| `POST /api/protected/:code/unlock` | Send a password, get the destination | No |
-| `GET /:code` | The short link itself, redirects | No |
+- Argon2 hashing for passwords and link passwords
+- HTTP-only, SameSite Lax login cookie
+- The same error for a wrong password and an unknown email
+- Rate limits on sign-up, login, link creation and password guesses
+- Only http and https destinations are accepted
+- A random state value checked on the Google callback
+- Ownership checks on editing, deleting and analytics
+- The Google client secret stays in `Backend/.env` and the backend containers
+- Real `.env` files are ignored by Git, only the `.env.example` templates are tracked
 
-Rate limits, counted per visitor address: register and login share 10 requests per 15 minutes, link creation is 30 per minute, and password attempts are 10 per 15 minutes for each link. When a limit is hit the answer is status 429 with a `Retry-After` header.
+Deployment
+----------
 
-A few short codes are reserved because they are pages of the app: `api`, `login`, `register`, `urls`, `analytics`, `auth`, `expired`, `not-active`, `protected` and `assets`.
+See DEPLOYMENT.md for what to change before running ZipLink for other people.
 
-## Testing checklist
+Contributing
+------------
 
-Start the system with Docker Compose and open http://localhost:8080. Tick each item as you go.
+1. Fork the project.
+2. Create a feature branch.
+3. Commit your changes.
+4. Push the branch.
+5. Open a pull request.
 
-Registration and email login
+License
+-------
 
-- [ ] Open Log in, then Create an account. Register with a name, an email and a password of 8 or more characters. You land on My links, which is empty.
-- [ ] Register the same email again (in a private window). You see "This email is already registered."
-- [ ] Log out. Log in with the same email and password. You land on My links.
-- [ ] Log in with a wrong password. You see "Invalid email or password."
-- [ ] While logged out, open http://localhost:8080/urls. You are sent to the login page.
+No license has been chosen yet.
 
-Google sign-in (needs your own Google credentials, see the setup section)
+---
 
-- [ ] Click Continue with Google and sign in. You land on My links with your Google name in the top bar.
-- [ ] Log out and sign in with Google again. You get the same account, not a second one.
-- [ ] Try Google sign-in with an email that already has a password account. You return to the login page with an explanation.
-
-Creating links
-
-- [ ] On the home page, paste `https://example.com/test` and press Shorten URL. You get a short link and a QR code.
-- [ ] Scan the QR code with a phone, or open the short link. It goes to the destination.
-- [ ] Open More options and create a link with a custom code, such as `my-test`. Try the same code again. You see "already taken."
-- [ ] Try the custom code `login`. You see that it is reserved.
-- [ ] Create a link with a password. Open it in a private window. You see the password page. A wrong password shows an error, the right one opens the destination.
-- [ ] Create a link that expires in a few minutes. After it expires, opening it shows the "link has expired" page.
-- [ ] Create a link that starts in the future. Opening it shows the "not active yet" page.
-
-Redirects, editing and deleting
-
-- [ ] In My links, edit a link's destination, open the short link again, and confirm the new destination is used right away.
-- [ ] Delete a link and open its short address. You see "URL not found".
-
-Analytics
-
-- [ ] Open a link several times, from a phone and from a computer if you can.
-- [ ] Wait about 10 seconds, then open Analytics for that link. Total clicks, the daily chart and the device bars show the visits.
-- [ ] Open Analytics for a link with no visits. You see the "no clicks recorded yet" message.
-
-Rate limiting
-
-- [ ] Run this in a terminal. The first ten answers are 401 and the eleventh is 429.
-
-  ```
-  for i in $(seq 11); do curl -s -o /dev/null -w "%{http_code} " -X POST http://localhost:8080/api/auth/login -H "Content-Type: application/json" -d '{"email":"nobody@example.com","password":"wrongwrong"}'; done
-  ```
-
-- [ ] To reset the counters, wait 15 minutes, or run `docker compose exec redis redis-cli flushall`. That also clears the cache and any clicks still in the queue.
-
-System behaviour
-
-- [ ] Run `curl -sI http://localhost:8080/api/auth/check` several times. The `X-Upstream` address changes between three values.
-- [ ] Run `docker compose stop app2`. The site keeps working. Start it again with `docker compose start app2`.
-- [ ] Run `docker compose stop redis`. Redirects and logins still work. Start it again with `docker compose start redis`.
-
-## What has been tested, and what has not
-
-There is no automated test suite. Everything below was checked by hand with scripts and a real browser while the project was built.
-
-Tested end to end:
-
-- Email registration, login, logout and the logged-in check
-- Link creation with custom codes, passwords, start and end dates, and QR codes
-- Redirects, including expired, not yet active and password protected links, and the password page
-- My links: list, edit, delete, pagination
-- Analytics page, with seeded and real clicks, in light and dark themes and at phone width
-- Redis cache, cache removal on edit and delete, the click queue, the rate limits, and the fall back to MongoDB when Redis is stopped
-- Docker Compose with Nginx: even spread over three copies, a copy stopped while the site kept working, and a clean shutdown that saves queued clicks
-- The full browser flow through both http://localhost:5173 (without Docker) and http://localhost:8080 (Docker Compose), using Microsoft Edge
-
-Not tested end to end:
-
-- Signing in with a real Google account. What was checked: Express redirects to Google with the right client and callback address, Google accepted the request and showed its sign-in page (checked for the callback on port 5000), and the code that handles the return was run with a stand-in for Google. The callback on port 8080 has not been registered with Google or tried.
-- HTTPS and production settings, including Secure cookies
-- Scanning a QR code with a phone. The image was generated and looked correct.
-- Any browser other than Edge, and Docker on Linux or macOS
-- Heavy traffic or many users at once
-- Device detection for unusual devices. It reads the browser's user agent text and is approximate.
-
-## Known limitations
-
-Analytics and click counting
-
-- Click counts are not instant. A click waits in Redis and is saved by a job that runs every 5 seconds, so analytics can be about 5 seconds behind.
-- A crash can lose clicks. A copy takes up to 500 clicks out of the Redis queue and then writes them to MongoDB. If that copy crashes in between, those clicks, up to 500, are lost. If MongoDB reports an error, the batch is put back in the queue instead.
-- A batch can be counted twice. A batch needs two MongoDB writes, the click records and the link's counter. If the second write fails after the first one worked, the batch is retried and the first part is saved again. This should be rare.
-- Stopping the system cleanly (`docker compose stop`) saves queued clicks first. Killing it does not.
-- When Redis is down, clicks are written to MongoDB directly instead of through the queue. They show up in analytics straight away. The visitor does not wait for that write.
-- Days in the daily chart are UTC days. Clicks from before analytics existed are in the total but not in the daily or device charts.
-
-Single points of failure
-
-- There is one Redis. If it stops, links still redirect and logins still work, but there is no cache, no rate limiting and no queue until it returns.
-- There is one Nginx. If it stops, the site is unreachable even though the backend copies are healthy.
-- There is one MongoDB. If it stops, most things stop.
-- To remove these in a real deployment you would run Redis replicas with Sentinel or Cluster, more than one Nginx behind a cloud load balancer, and a MongoDB replica set.
-
-Other
-
-- Rate limits stop working while Redis is down. They fail open, so nobody is locked out, but login attempts are not limited during an outage.
-- Logging out removes the cookie but cannot cancel the token on the server. A copied token stays valid for 7 days.
-- Email addresses are not verified, and there is no password reset.
-- A link's password can be set only when the link is created.
-- A visitor who opens a short code that does not exist sees a plain error message, not a styled page.
-- Backend dependencies: `npm audit` reports 3 high severity advisories. All three come from `nodemon`, a development tool that is listed under `dependencies` instead of `devDependencies` in `Backend/package.json`. They have not been fixed. See DEPLOYMENT.md.
-
-## Security notes
-
-- Passwords are hashed with Argon2. Link passwords too.
-- The login cookie is HTTP-only and SameSite Lax.
-- Login answers are the same for a wrong password and an unknown email.
-- The Google client secret exists only in `Backend/.env` and in the backend containers' environment. It is not in any image, in the frontend, or in Git.
-- Real `.env` files are ignored by Git at the project root and in both folders. Only the `.env.example` templates are tracked.
-
-## More
-
-DEPLOYMENT.md has notes for running ZipLink outside your own computer.
+Made with ❤️ using React and Node.js
