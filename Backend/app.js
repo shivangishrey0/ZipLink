@@ -7,6 +7,7 @@ import shortUrlRouter from "./src/routes/short_url.route.js";
 import authRouter from "./src/routes/auth.route.js";
 import userRouter from "./src/routes/user.route.js";
 import analyticsRouter from "./src/routes/analytics.route.js";
+import protectedRouter from "./src/routes/protected.route.js";
 import { redirectFromShortUrl } from "./src/controller/short_url.controller.js";
 import { errorHandler } from "./src/Utils/errorHandler.js";
 
@@ -21,6 +22,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/create", shortUrlRouter);
+app.use("/api/protected", protectedRouter);
 app.get("/:id", redirectFromShortUrl)
 
 app.use(errorHandler);

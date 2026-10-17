@@ -1,12 +1,14 @@
 import mongoose from "mongoose";
 import ShortUrl from "../models/short_url.model.js";
 
-export const saveShortUrl = async({shortUrl,longUrl,userId,expiresAt,activeFrom})=> {
+export const saveShortUrl = async({shortUrl,longUrl,userId,expiresAt,activeFrom,password})=> {
     const newUrl= new ShortUrl({
         full_url:longUrl,
         short_url:shortUrl,
         expiresAt,
-        activeFrom
+        activeFrom,
+        isProtected:Boolean(password),
+        password
     })
     if(userId){
         newUrl.user=userId
@@ -19,6 +21,9 @@ export const incrementClicks=async(id)=>{
 }
 export const getShortUrl=async(shortUrl)=>{
     return await ShortUrl.findOne({short_url:shortUrl})
+}
+export const getShortUrlWithPassword=async(shortUrl)=>{
+    return await ShortUrl.findOne({short_url:shortUrl}).select("+password")
 }
 export const findUrlsByUser=async(userId,skip,limit)=>{
     return await ShortUrl.find({user:userId}).sort({_id:-1}).skip(skip).limit(limit).lean()

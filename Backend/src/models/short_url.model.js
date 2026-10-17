@@ -22,6 +22,14 @@ const shortUrlSchema = new mongoose.Schema(
         activeFrom:{
             type:Date,
         },
+        isProtected:{
+            type:Boolean,
+            default:false,
+        },
+        password:{
+            type:String,
+            select:false,
+        },
         user:{
             type:mongoose.Schema.Types.ObjectId,
             ref:"User",
