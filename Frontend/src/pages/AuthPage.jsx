@@ -1,5 +1,6 @@
 import { Link, Navigate, useSearch } from "@tanstack/react-router";
 import { useSelector } from "react-redux";
+import AuthLayout from "../components/auth/AuthLayout.jsx";
 import LoginForm from "../components/LoginForm.jsx";
 import RegisterForm from "../components/RegisterForm.jsx";
 import GoogleAuthButton from "../components/GoogleAuthButton.jsx";
@@ -23,44 +24,46 @@ const AuthPage = ({ mode }) => {
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6">
-      <div className="space-y-1 text-center">
-        <h1 className="font-display text-3xl font-bold">
+    <AuthLayout>
+      <div>
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-balance sm:text-4xl">
           {isLogin ? "Welcome back" : "Create your account"}
         </h1>
-        <p className="text-sm text-muted">
-          {isLogin ? "Log in to manage your links." : "Free, and your links stay yours."}
+        <p className="mt-2.5 text-base leading-relaxed text-muted">
+          {isLogin
+            ? "Log in to manage your links and see how they perform."
+            : "Start creating short links and tracking their clicks."}
         </p>
       </div>
 
-      <div className="card space-y-5">
-        {isLogin && error && (
-          <p role="alert" className="error-text">
-            {GOOGLE_ERRORS[error] ?? "Sign-in did not complete. Please try again."}
-          </p>
-        )}
+      {isLogin && error && (
+        <p role="alert" className="error-text mt-6">
+          {GOOGLE_ERRORS[error] ?? "Sign-in did not complete. Please try again."}
+        </p>
+      )}
 
-        {isLogin ? <LoginForm /> : <RegisterForm />}
+      <div className="mt-8 space-y-6">
+        <GoogleAuthButton />
 
-        <div className="flex items-center gap-3 text-xs text-muted">
-          <span className="h-px flex-1 bg-line" />
-          or
-          <span className="h-px flex-1 bg-line" />
+        <div className="flex items-center gap-3 text-xs text-faint">
+          <span className="h-px flex-1 bg-white/10" />
+          or continue with email
+          <span className="h-px flex-1 bg-white/10" />
         </div>
 
-        <GoogleAuthButton />
+        {isLogin ? <LoginForm /> : <RegisterForm />}
       </div>
 
-      <p className="text-center text-sm text-muted">
-        {isLogin ? "New here? " : "Already have an account? "}
+      <p className="mt-8 text-center text-sm text-muted">
+        {isLogin ? "New to ZipLink? " : "Already have an account? "}
         <Link
           to={isLogin ? "/register" : "/login"}
-          className="font-medium text-brand hover:underline"
+          className="font-semibold text-brand-text transition hover:text-white"
         >
           {isLogin ? "Create an account" : "Log in"}
         </Link>
       </p>
-    </div>
+    </AuthLayout>
   );
 };
 

@@ -9,10 +9,14 @@ import NavBar from "./components/NavBar.jsx";
 // Pages that draw their own full-width layout. Everything else sits in a centered container.
 const FULL_WIDTH = ["/"];
 
+// The login and register pages draw their own header, so no navigation bar or footer around them.
+const BARE = ["/login", "/register"];
+
 const RootLayout = () => {
   const checked = useSelector((state) => state.auth.checked);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const fullWidth = FULL_WIDTH.includes(pathname);
+  const bare = BARE.includes(pathname);
+  const fullWidth = bare || FULL_WIDTH.includes(pathname);
 
   // A new page starts at the top (the home page handles its own #section scrolling).
   useEffect(() => {
@@ -28,7 +32,7 @@ const RootLayout = () => {
         Skip to content
       </a>
       <AmbientBackground />
-      <NavBar />
+      {!bare && <NavBar />}
       <main id="content" className="relative z-10 flex-1">
         {checked ? (
           fullWidth ? (
@@ -45,7 +49,7 @@ const RootLayout = () => {
           </div>
         )}
       </main>
-      <Footer />
+      {!bare && <Footer />}
     </div>
   );
 };

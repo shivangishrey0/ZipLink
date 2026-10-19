@@ -3,7 +3,7 @@ import { googleLoginUrl } from "../api/User.api.jsx";
 // A normal link, not an API call: the browser must leave for Google's own sign-in page.
 const GoogleAuthButton = ({ label = "Continue with Google" }) => {
   return (
-    <a href={googleLoginUrl} className="btn-ghost w-full">
+    <a href={googleLoginUrl} className="btn-ghost h-11 w-full">
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
         <path
           fill="#EA4335"
