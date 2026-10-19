@@ -1,31 +1,33 @@
-import { useSelector } from "react-redux";
-import { Link } from "@tanstack/react-router";
-import UrlForm from "../components/UrlForm.jsx";
+import { useEffect } from "react";
+import { useRouterState } from "@tanstack/react-router";
+import Hero from "../components/landing/Hero.jsx";
+import Features from "../components/landing/Features.jsx";
+import HowItWorks from "../components/landing/HowItWorks.jsx";
+import FinalCta from "../components/landing/FinalCta.jsx";
 
 const HomePage = () => {
-  const user = useSelector((state) => state.auth.user);
+  const hash = useRouterState({ select: (state) => state.location.hash });
+
+  // Arriving from another page with #features or #how-it-works: scroll to that section.
+  useEffect(() => {
+    const id = (hash ?? "").replace(/^#/, "");
+    if (!id) return undefined;
+
+    const timer = setTimeout(() => {
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.getElementById(id)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    }, 60);
+
+    return () => clearTimeout(timer);
+  }, [hash]);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
-      <div className="space-y-3 text-center">
-        <h1 className="font-display text-4xl font-bold sm:text-5xl">Short links that stay yours</h1>
-        <p className="text-muted">
-          Shorten a URL, protect it with a password, set when it opens and closes, and see who
-          clicks.
-        </p>
-      </div>
-
-      <UrlForm />
-
-      {!user && (
-        <p className="text-center text-sm text-muted">
-          <Link to="/login" className="font-medium text-brand hover:underline">
-            Log in
-          </Link>{" "}
-          to keep your links, edit them later and see their analytics.
-        </p>
-      )}
-    </div>
+    <>
+      <Hero />
+      <Features />
+      <HowItWorks />
+      <FinalCta />
+    </>
   );
 };
 
