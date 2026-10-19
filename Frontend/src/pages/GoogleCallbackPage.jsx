@@ -23,9 +23,12 @@ const GoogleCallbackPage = () => {
   }, [dispatch, navigate]);
 
   return (
-    <div className="flex flex-col items-center gap-3 py-24 text-muted" role="status">
-      <LoaderCircle className="animate-spin" />
-      Finishing sign-in...
+    <div className="flex flex-col items-center gap-4 py-28 text-center" role="status">
+      <span className="grid h-14 w-14 place-items-center rounded-2xl border border-brand/30 bg-brand/10 text-brand-text">
+        <LoaderCircle size={26} className="animate-spin" aria-hidden="true" />
+      </span>
+      <p className="font-display text-lg font-bold">Finishing sign-in</p>
+      <p className="text-sm text-muted">One moment while we log you in.</p>
     </div>
   );
 };

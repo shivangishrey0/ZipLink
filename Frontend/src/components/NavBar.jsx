@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { LayoutDashboard, LogOut, Menu, X } from "lucide-react";
-import { logoutUser } from "../api/User.api.jsx";
-import { clearUser } from "../store/slice/authSlice.js";
+import { useLogout } from "../hooks/useLogout.js";
 import Logo from "./Logo.jsx";
 
 const SECTIONS = [
@@ -14,9 +12,7 @@ const SECTIONS = [
 
 const NavBar = () => {
   const user = useSelector((state) => state.auth.user);
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   const [open, setOpen] = useState(false);
@@ -39,16 +35,7 @@ const NavBar = () => {
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const logout = useMutation({
-    mutationFn: logoutUser,
-    onSuccess: () => {
-      dispatch(clearUser());
-      // Cached links and analytics belong to the person who just left.
-      queryClient.clear();
-      setOpen(false);
-      navigate({ to: "/" });
-    },
-  });
+  const logout = useLogout(() => setOpen(false));
 
   const scrollBehavior = () =>
     window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";

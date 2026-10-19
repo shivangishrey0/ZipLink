@@ -12,10 +12,13 @@ const FULL_WIDTH = ["/"];
 // The login and register pages draw their own header, so no navigation bar or footer around them.
 const BARE = ["/login", "/register"];
 
+// The dashboard has its own sidebar layout.
+const isDashboard = (pathname) => pathname.startsWith("/urls") || pathname.startsWith("/analytics");
+
 const RootLayout = () => {
   const checked = useSelector((state) => state.auth.checked);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const bare = BARE.includes(pathname);
+  const bare = BARE.includes(pathname) || isDashboard(pathname);
   const fullWidth = bare || FULL_WIDTH.includes(pathname);
 
   // A new page starts at the top (the home page handles its own #section scrolling).

@@ -1,22 +1,39 @@
-import { Link } from "@tanstack/react-router";
+import { useSelector } from "react-redux";
 import { Plus } from "lucide-react";
-import RequireAuth from "../components/RequireAuth.jsx";
+import { useDashboard } from "../components/dashboard/DashboardLayout.jsx";
+import OverviewCards from "../components/dashboard/OverviewCards.jsx";
 import UserUrls from "../components/UserUrls.jsx";
 
+// Rendered inside DashboardLayout, which already makes sure someone is logged in.
 const UrlsPage = () => {
+  const user = useSelector((state) => state.auth.user);
+  const { openCreate } = useDashboard();
+  const firstName = (user?.name ?? "").trim().split(/\s+/)[0];
+
   return (
-    <RequireAuth>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="font-display text-3xl font-bold">My links</h1>
-          <Link to="/" className="btn-primary">
-            <Plus size={16} aria-hidden="true" />
-            New link
-          </Link>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-extrabold tracking-tight">Dashboard</h1>
+          <p className="mt-1.5 text-muted">
+            Welcome back{firstName ? `, ${firstName}` : ""}. Create, share and manage your short links.
+          </p>
         </div>
-        <UserUrls />
+        <button type="button" className="btn-primary" onClick={openCreate}>
+          <Plus size={17} aria-hidden="true" />
+          Create link
+        </button>
       </div>
-    </RequireAuth>
+
+      <OverviewCards />
+
+      <section aria-labelledby="links-title" className="space-y-4">
+        <h2 id="links-title" className="font-display text-xl font-bold tracking-tight">
+          Your links
+        </h2>
+        <UserUrls />
+      </section>
+    </div>
   );
 };
 

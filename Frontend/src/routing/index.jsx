@@ -2,6 +2,7 @@ import { createRootRoute, createRoute, createRouter, lazyRouteComponent } from "
 import RootLayout from "../RootLayout.jsx";
 import HomePage from "../pages/HomePage.jsx";
 import AuthPage from "../pages/AuthPage.jsx";
+import DashboardLayout from "../components/dashboard/DashboardLayout.jsx";
 import UrlsPage from "../pages/UrlsPage.jsx";
 import GoogleCallbackPage from "../pages/GoogleCallbackPage.jsx";
 import ExpiredLinkPage from "../pages/ExpiredLinkPage.jsx";
@@ -42,14 +43,21 @@ const googleCallbackRoute = createRoute({
   component: GoogleCallbackPage,
 });
 
-const urlsRoute = createRoute({
+// Layout route (no path of its own): it adds the sidebar and the login check around the dashboard pages.
+const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
+  id: "dashboard",
+  component: DashboardLayout,
+});
+
+const urlsRoute = createRoute({
+  getParentRoute: () => dashboardRoute,
   path: "/urls",
   component: UrlsPage,
 });
 
 const analyticsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => dashboardRoute,
   path: "/analytics/$code",
   // The charting library is large, so this page is only downloaded when someone opens it.
   component: lazyRouteComponent(() => import("../pages/AnalyticsPage.jsx")),
@@ -78,8 +86,7 @@ const routeTree = rootRoute.addChildren([
   loginRoute,
   registerRoute,
   googleCallbackRoute,
-  urlsRoute,
-  analyticsRoute,
+  dashboardRoute.addChildren([urlsRoute, analyticsRoute]),
   expiredRoute,
   notActiveRoute,
   protectedRoute,

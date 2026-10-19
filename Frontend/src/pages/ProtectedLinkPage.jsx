@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
-import { Lock } from "lucide-react";
+import { ArrowRight, LoaderCircle, Lock } from "lucide-react";
 import { unlockUrl } from "../api/ShortUrl.api.jsx";
 import { getErrorMessage } from "../utils/helper.js";
+import PasswordInput from "../components/auth/PasswordInput.jsx";
+import StatusCard from "../components/StatusCard.jsx";
 
 // The backend redirects visitors here for password protected links: /protected/<short code>.
 const ProtectedLinkPage = () => {
@@ -16,54 +18,60 @@ const ProtectedLinkPage = () => {
     onSuccess: (url) => window.location.assign(url),
   });
 
+  const busy = unlock.isPending || unlock.isSuccess;
+
   return (
-    <div className="mx-auto max-w-md space-y-6 py-8">
-      <div className="space-y-3 text-center">
-        <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-soft text-brand">
-          <Lock aria-hidden="true" />
-        </span>
-        <h1 className="font-display text-3xl font-bold">This link is protected</h1>
-        <p className="text-muted">Enter the password the owner gave you to continue.</p>
-      </div>
-
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          unlock.mutate();
-        }}
-        className="card space-y-4"
-      >
-        <div>
-          <label htmlFor="unlock-password" className="label">
-            Password
-          </label>
-          <input
-            id="unlock-password"
-            type="password"
-            required
-            autoFocus
-            autoComplete="off"
-            className="input"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
-        </div>
-
-        {unlock.isError && (
-          <p role="alert" className="error-text">
-            {getErrorMessage(unlock.error)}
-          </p>
-        )}
-
-        <button
-          type="submit"
-          className="btn-primary w-full"
-          disabled={unlock.isPending || unlock.isSuccess}
+    <StatusCard
+      icon={Lock}
+      tone="brand"
+      title="This link is protected"
+      actions={
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            unlock.mutate();
+          }}
+          className="card w-full space-y-4 text-left"
         >
-          {unlock.isPending || unlock.isSuccess ? "Opening..." : "Unlock link"}
-        </button>
-      </form>
-    </div>
+          <div>
+            <label htmlFor="unlock-password" className="label">
+              Password
+            </label>
+            <PasswordInput
+              id="unlock-password"
+              required
+              autoFocus
+              autoComplete="off"
+              placeholder="Enter the password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </div>
+
+          {unlock.isError && (
+            <p role="alert" className="error-text">
+              {getErrorMessage(unlock.error)}
+            </p>
+          )}
+
+          <button type="submit" className="btn-primary h-11 w-full" disabled={busy}>
+            {busy ? (
+              <>
+                <LoaderCircle size={17} className="animate-spin" aria-hidden="true" />
+                Opening
+              </>
+            ) : (
+              <>
+                Unlock link
+                <ArrowRight size={17} aria-hidden="true" />
+              </>
+            )}
+          </button>
+        </form>
+      }
+    >
+      <p>Enter the password the owner gave you to continue.</p>
+    </StatusCard>
   );
 };
 

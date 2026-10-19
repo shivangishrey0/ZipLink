@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { LoaderCircle, X } from "lucide-react";
 import { updateUrl } from "../api/ShortUrl.api.jsx";
 import { fromDateTimeLocal, getErrorMessage, toDateTimeLocal } from "../utils/helper.js";
 
@@ -56,16 +56,22 @@ const EditLinkModal = ({ url, onClose }) => {
     <dialog
       ref={dialogRef}
       onClose={onClose}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-xl border border-line bg-surface p-0 text-ink backdrop:bg-black/50"
+      onClick={(event) => event.target === dialogRef.current && !save.isPending && onClose()}
+      aria-labelledby="edit-link-title"
+      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-white/10 bg-bg-2 p-0 text-ink shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm"
     >
-      <form onSubmit={handleSubmit} className="space-y-4 p-5 sm:p-6">
+      <form onSubmit={handleSubmit} className="space-y-5 p-5 sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="font-display text-xl font-semibold">Edit link</h2>
-            <p className="truncate text-sm text-muted">{url.shortUrl}</p>
+            <h2 id="edit-link-title" className="font-display text-xl font-extrabold tracking-tight">
+              Edit link
+            </h2>
+            <p className="mt-1 truncate font-mono text-sm text-brand-text">
+              {url.shortUrl.replace(/^https?:\/\//, "")}
+            </p>
           </div>
-          <button type="button" className="btn-ghost px-2.5" onClick={onClose} aria-label="Close">
-            <X size={16} aria-hidden="true" />
+          <button type="button" className="btn-ghost h-9 w-9 shrink-0 px-0" onClick={onClose} aria-label="Close">
+            <X size={17} aria-hidden="true" />
           </button>
         </div>
 
@@ -108,7 +114,7 @@ const EditLinkModal = ({ url, onClose }) => {
             />
           </div>
         </div>
-        <p className="text-xs text-muted">Clear a date to remove it. The short code cannot change.</p>
+        <p className="text-xs text-faint">Clear a date to remove it. The short code cannot change.</p>
 
         {save.isError && (
           <p role="alert" className="error-text">
@@ -116,12 +122,13 @@ const EditLinkModal = ({ url, onClose }) => {
           </p>
         )}
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 pt-1">
           <button type="button" className="btn-ghost" onClick={onClose}>
             Cancel
           </button>
           <button type="submit" className="btn-primary" disabled={save.isPending}>
-            {save.isPending ? "Saving..." : "Save changes"}
+            {save.isPending && <LoaderCircle size={16} className="animate-spin" aria-hidden="true" />}
+            {save.isPending ? "Saving" : "Save changes"}
           </button>
         </div>
       </form>
