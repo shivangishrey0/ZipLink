@@ -6,10 +6,15 @@ import config from "../config/config.js";
 
 const COOKIE_NAME = "accessToken";
 
+const isProduction = config.NODE_ENV === "production";
+
 const cookieOptions = {
     httpOnly: true, // page JavaScript cannot read the token, so XSS cannot steal it
-    secure: config.NODE_ENV === "production", // HTTPS only in production
-    sameSite: "lax", // not sent on cross-site POSTs, which blocks most CSRF
+    secure: isProduction, // HTTPS only in production
+    // The frontend (Vercel) and backend (Render) are different sites in production, so the browser
+    // only sends this cookie on the frontend's API calls when it is SameSite=None (which needs secure).
+    // Locally both run on localhost, where lax is enough and blocks most CSRF.
+    sameSite: isProduction ? "none" : "lax",
     maxAge: TOKEN_MAX_AGE_MS,
 };
 
